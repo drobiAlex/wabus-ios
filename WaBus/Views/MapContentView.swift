@@ -6,6 +6,17 @@ struct MapContentView: View {
 
     var body: some View {
         Map(position: $viewModel.cameraPosition) {
+            ForEach(viewModel.activeRoutePolylines) { polyline in
+                MapPolyline(coordinates: polyline.coordinates)
+                    .stroke(polyline.color.opacity(0.8), lineWidth: 4)
+            }
+
+            ForEach(viewModel.activeRouteStops) { stop in
+                Annotation(stop.name, coordinate: stop.coordinate) {
+                    StopAnnotationView(stop: stop)
+                }
+            }
+
             ForEach(viewModel.filteredVehicles, id: \.key) { vehicle in
                 Annotation(vehicle.line, coordinate: vehicle.coordinate) {
                     VehicleAnnotationView(vehicle: vehicle, heading: viewModel.headings[vehicle.key])

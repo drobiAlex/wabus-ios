@@ -28,6 +28,11 @@ final class MapViewModel {
     private(set) var tramCount: Int = 0
     private(set) var availableLines: [(line: String, type: VehicleType)] = []
 
+    // MARK: - Route & Stops
+
+    private(set) var activeRoutePolylines: [RoutePolyline] = []
+    private(set) var activeRouteStops: [Stop] = []
+
     private static let maxAnnotations = 150
 
     // MARK: - Private
@@ -38,6 +43,10 @@ final class MapViewModel {
     private var wsStateTask: Task<Void, Never>?
     private var favouriteRefreshTask: Task<Void, Never>?
     private var _lineTypeKeys: Set<String> = []
+    private var allStops: [Stop] = []
+    private var routeShapesCache: [String: [RouteShape]] = [:]
+    private var routeStopsCache: [String: [Stop]] = [:]
+    private var routeFetchTasks: [String: Task<Void, Never>] = [:]
 
     // MARK: - Lifecycle
 
@@ -90,18 +99,114 @@ final class MapViewModel {
 
     func selectLine(_ line: String) {
         selectedLines.insert(line)
+        fetchRouteDataIfNeeded(for: line)
     }
 
     func deselectLine(_ line: String) {
         selectedLines.remove(line)
+        routeFetchTasks[line]?.cancel()
+        routeFetchTasks[line] = nil
+        rebuildRouteOverlays()
     }
 
     func toggleLine(_ line: String) {
         if selectedLines.contains(line) {
             selectedLines.remove(line)
+            routeFetchTasks[line]?.cancel()
+            routeFetchTasks[line] = nil
+            rebuildRouteOverlays()
         } else {
             selectedLines.insert(line)
+            fetchRouteDataIfNeeded(for: line)
         }
+    }
+
+    // MARK: - Route Data
+
+    private func fetchRouteDataIfNeeded(for line: String) {
+        guard routeShapesCache[line] == nil else {
+            rebuildRouteOverlays()
+            return
+        }
+        routeFetchTasks[line] = Task {
+            await loadAllStopsIfNeeded()
+            do {
+                let shapes = try await GTFSAPIService.fetchRouteShape(line: line)
+                guard !Task.isCancelled else { return }
+                routeShapesCache[line] = shapes
+                routeStopsCache[line] = stopsNearShapes(shapes)
+                rebuildRouteOverlays()
+            } catch {
+                // Silently skip failed fetches
+            }
+        }
+    }
+
+    private func loadAllStopsIfNeeded() async {
+        guard allStops.isEmpty else { return }
+        do {
+            allStops = try await GTFSAPIService.fetchAllStops()
+        } catch {
+            // Silently skip
+        }
+    }
+
+    private func stopsNearShapes(_ shapes: [RouteShape]) -> [Stop] {
+        guard !allStops.isEmpty else { return [] }
+        var shapeLocations: [CLLocation] = []
+        for shape in shapes {
+            let pts = shape.points
+            let step = max(1, pts.count / 200)
+            for i in stride(from: 0, to: pts.count, by: step) {
+                shapeLocations.append(CLLocation(latitude: pts[i].lat, longitude: pts[i].lon))
+            }
+            if let last = pts.last {
+                shapeLocations.append(CLLocation(latitude: last.lat, longitude: last.lon))
+            }
+        }
+        return allStops.filter { stop in
+            let stopLoc = CLLocation(latitude: stop.lat, longitude: stop.lon)
+            return shapeLocations.contains { $0.distance(from: stopLoc) <= 80 }
+        }
+    }
+
+    private func rebuildRouteOverlays() {
+        var polylines: [RoutePolyline] = []
+        var stops: [Stop] = []
+        var seenStopIds = Set<String>()
+
+        for line in selectedLines {
+            let type = vehicleTypeForLine(line)
+            if let shapes = routeShapesCache[line] {
+                for shape in shapes {
+                    let coords = shape.points
+                        .sorted { $0.sequence < $1.sequence }
+                        .map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
+                    polylines.append(RoutePolyline(
+                        id: shape.id,
+                        coordinates: coords,
+                        color: type?.color ?? .blue
+                    ))
+                }
+            }
+            if let lineStops = routeStopsCache[line] {
+                for stop in lineStops {
+                    if seenStopIds.insert(stop.id).inserted {
+                        stops.append(stop)
+                    }
+                }
+            }
+        }
+
+        activeRoutePolylines = polylines
+        activeRouteStops = stops
+    }
+
+    private func vehicleTypeForLine(_ line: String) -> VehicleType? {
+        for v in vehicles.values where v.line == line {
+            return v.type
+        }
+        return nil
     }
 
     // MARK: - Recompute
@@ -118,7 +223,7 @@ final class MapViewModel {
             case .tram: guard showT else { return false }
             }
             if !selLines.isEmpty {
-                return selLines.contains(vehicle.line) || favLines.contains(vehicle.line)
+                return selLines.contains(vehicle.line)
             }
             return true
         }
