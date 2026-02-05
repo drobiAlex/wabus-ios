@@ -8,14 +8,31 @@
 import SwiftUI
 
 struct ContentView: View {
+    @State private var viewModel = MapViewModel()
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        ZStack {
+            MapContentView(viewModel: viewModel)
+                .ignoresSafeArea()
+
+            VStack {
+                ConnectionStatusView(state: viewModel.connectionState)
+                    .padding(.top, 4)
+                Spacer()
+                FilterBarView(viewModel: viewModel)
+            }
         }
-        .padding()
+        .sheet(item: $viewModel.selectedVehicle) { vehicle in
+            VehicleDetailSheet(vehicle: vehicle)
+                .environment(viewModel)
+        }
+        .sheet(isPresented: $viewModel.showLineList) {
+            LineListView()
+                .environment(viewModel)
+        }
+        .task {
+            viewModel.start()
+        }
     }
 }
 
