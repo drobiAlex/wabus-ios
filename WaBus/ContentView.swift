@@ -16,10 +16,15 @@ struct ContentView: View {
                 .ignoresSafeArea()
 
             VStack {
-                ConnectionStatusView(state: viewModel.connectionState)
-                    .padding(.top, 4)
+                HStack {
+                    Spacer()
+                    ConnectionStatusView(state: viewModel.connectionState)
+                        .padding(.top, 8)
+                        .padding(.trailing, 16)
+                }
                 Spacer()
                 FilterBarView(viewModel: viewModel)
+                    .padding(.bottom, 8)
             }
         }
         .sheet(item: $viewModel.selectedVehicle) { vehicle in

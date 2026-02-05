@@ -15,6 +15,7 @@ struct MapContentView: View {
                 }
             }
         }
+        .mapStyle(.standard(elevation: .realistic))
         .onMapCameraChange(frequency: .onEnd) { context in
             viewModel.onMapRegionChanged(context.region)
         }

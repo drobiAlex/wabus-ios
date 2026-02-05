@@ -5,26 +5,26 @@ struct VehicleAnnotationView: View {
     var heading: Double?
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Direction arrow (only when heading is known)
+        HStack(spacing: 5) {
             if let heading {
-                Image(systemName: "location.north.fill")
-                    .font(.system(size: 10))
-                    .foregroundStyle(vehicle.type.color)
-                    .rotationEffect(.degrees(heading))
+                Image(systemName: "chevron.forward")
+                    .font(.system(size: 11, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.9))
+                    .rotationEffect(.degrees(heading - 90))
             }
 
-            HStack(spacing: 4) {
-                Image(systemName: vehicle.type.systemImage)
-                    .font(.system(size: 10))
-                Text(vehicle.line)
-                    .font(.system(size: 12, weight: .bold))
-            }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
-            .background(vehicle.type.color)
-            .foregroundStyle(.white)
-            .clipShape(Capsule())
+            Image(systemName: vehicle.type.systemImage)
+                .font(.system(size: 13, weight: .heavy, design: .rounded))
+
+            Text(vehicle.line)
+                .font(.system(size: 15, weight: .heavy, design: .rounded))
         }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(vehicle.type.color)
+        .clipShape(Capsule())
+        .frame(minWidth: 44, minHeight: 44)
+        .contentShape(Rectangle())
     }
 }

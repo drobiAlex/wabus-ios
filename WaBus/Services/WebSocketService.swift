@@ -8,6 +8,7 @@ enum ConnectionState: Sendable {
 
 actor WebSocketService {
     private var task: URLSessionWebSocketTask?
+    private let session = URLSession(configuration: .default)
     private var subscribedTiles: Set<String> = []
     private var pingTask: Task<Void, Never>?
     private var receiveTask: Task<Void, Never>?
@@ -65,7 +66,6 @@ actor WebSocketService {
         stateContinuation?.yield(.connecting)
 
         let request = URLRequest(url: AppConfig.wsURL)
-        let session = URLSession(configuration: .default)
         let wsTask = session.webSocketTask(with: request)
         self.task = wsTask
         wsTask.resume()
@@ -73,7 +73,6 @@ actor WebSocketService {
         stateContinuation?.yield(.connected)
         reconnectDelay = 2.0
 
-        // Re-subscribe to previously tracked tiles
         if !subscribedTiles.isEmpty {
             let msg = WSSubscribe(tileIds: Array(subscribedTiles))
             send(msg)
