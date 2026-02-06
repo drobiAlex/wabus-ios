@@ -30,7 +30,7 @@ struct MapContentView: View {
                 Annotation(vehicle.line, coordinate: vehicle.coordinate) {
                     VehicleAnnotationView(vehicle: vehicle, heading: viewModel.headings[vehicle.key])
                         .onTapGesture {
-                            viewModel.selectedVehicle = vehicle
+                            viewModel.selectVehicle(vehicle)
                         }
                 }
             }

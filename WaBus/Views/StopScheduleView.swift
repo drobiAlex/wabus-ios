@@ -114,8 +114,15 @@ struct StopScheduleView: View {
 
         let (linesResult, scheduleResult) = await (fetchedLines, fetchedSchedule)
 
+        // Deduplicate lines by line number
+        var seenLines = Set<String>()
+        let uniqueLines = linesResult.filter { seenLines.insert($0.line).inserted }
+
+        // Deduplicate arrivals by tripId and filter to future only
         let now = Date()
+        var seenTrips = Set<String>()
         let futureArrivals = scheduleResult
+            .filter { seenTrips.insert($0.tripId).inserted }
             .filter { stopTime in
                 guard let date = stopTime.arrivalDate else { return false }
                 return date > now
@@ -126,7 +133,7 @@ struct StopScheduleView: View {
             }
             .prefix(20)
 
-        lines = linesResult
+        lines = uniqueLines
         allArrivals = Array(futureArrivals)
         isLoading = false
     }

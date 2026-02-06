@@ -15,6 +15,7 @@ final class MapViewModel {
     var showBuses = true { didSet { recomputeFiltered() } }
     var showTrams = true { didSet { recomputeFiltered() } }
     var selectedVehicle: Vehicle?
+    var showVehicleDetail = false
     var selectedStop: Stop?
     var connectionState: ConnectionState = .disconnected
     var selectedLines: Set<String> = [] { didSet { recomputeFiltered() } }
@@ -86,6 +87,33 @@ final class MapViewModel {
     func removeFavourite(_ fav: FavouriteLine) {
         favouritesStore.remove(fav)
         recomputeFiltered()
+    }
+
+    // MARK: - Vehicle Selection
+
+    func selectVehicle(_ vehicle: Vehicle) {
+        let previousLine = selectedVehicle?.line
+        selectedVehicle = vehicle
+
+        // Load route for this vehicle's line
+        if vehicle.line != previousLine {
+            // Clear previous vehicle route if it wasn't in selectedLines
+            if let prev = previousLine, !selectedLines.contains(prev) {
+                routeFetchTasks[prev]?.cancel()
+                routeFetchTasks[prev] = nil
+            }
+            fetchRouteDataIfNeeded(for: vehicle.line)
+        }
+    }
+
+    func deselectVehicle() {
+        if let line = selectedVehicle?.line, !selectedLines.contains(line) {
+            routeFetchTasks[line]?.cancel()
+            routeFetchTasks[line] = nil
+        }
+        selectedVehicle = nil
+        showVehicleDetail = false
+        rebuildRouteOverlays()
     }
 
     // MARK: - Map Region
@@ -182,7 +210,13 @@ final class MapViewModel {
         var stops: [Stop] = []
         var seenStopIds = Set<String>()
 
-        for line in selectedLines {
+        // Collect lines to show: selectedLines + selected vehicle's line
+        var linesToShow = selectedLines
+        if let vehicleLine = selectedVehicle?.line {
+            linesToShow.insert(vehicleLine)
+        }
+
+        for line in linesToShow {
             let type = vehicleTypeForLine(line)
             if let shapes = routeShapesCache[line] {
                 for shape in shapes {

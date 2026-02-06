@@ -23,13 +23,23 @@ struct ContentView: View {
                         .padding(.trailing, 16)
                 }
                 Spacer()
+
+                if let vehicle = viewModel.selectedVehicle {
+                    VehicleRouteBar(vehicle: vehicle)
+                        .environment(viewModel)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .padding(.bottom, 4)
+                }
+
                 FilterBarView(viewModel: viewModel)
                     .padding(.bottom, 8)
             }
         }
-        .sheet(item: $viewModel.selectedVehicle) { vehicle in
-            VehicleDetailSheet(vehicle: vehicle)
-                .environment(viewModel)
+        .sheet(isPresented: $viewModel.showVehicleDetail) {
+            if let vehicle = viewModel.selectedVehicle {
+                VehicleDetailSheet(vehicle: vehicle)
+                    .environment(viewModel)
+            }
         }
         .sheet(item: $viewModel.selectedStop) { stop in
             StopScheduleView(stop: stop)
