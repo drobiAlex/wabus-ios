@@ -6,11 +6,19 @@ struct ShapePoint: Codable, Sendable {
     let lat: Double
     let lon: Double
     let sequence: Int
+
+    var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: lat, longitude: lon)
+    }
 }
 
 struct RouteShape: Codable, Identifiable, Sendable {
     let id: String
     let points: [ShapePoint]
+
+    var coordinates: [CLLocationCoordinate2D] {
+        points.sorted { $0.sequence < $1.sequence }.map(\.coordinate)
+    }
 }
 
 struct ShapesResponse: Codable {
@@ -24,7 +32,7 @@ struct ShapesResponse: Codable {
     }
 }
 
-struct Stop: Codable, Identifiable, Sendable {
+struct Stop: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let code: String
     let name: String

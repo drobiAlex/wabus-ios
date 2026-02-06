@@ -14,6 +14,9 @@ struct MapContentView: View {
             ForEach(viewModel.activeRouteStops) { stop in
                 Annotation(stop.name, coordinate: stop.coordinate) {
                     StopAnnotationView(stop: stop)
+                        .onTapGesture {
+                            viewModel.selectedStop = stop
+                        }
                 }
             }
 

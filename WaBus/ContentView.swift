@@ -31,6 +31,9 @@ struct ContentView: View {
             VehicleDetailSheet(vehicle: vehicle)
                 .environment(viewModel)
         }
+        .sheet(item: $viewModel.selectedStop) { stop in
+            StopScheduleView(stop: stop)
+        }
         .sheet(isPresented: $viewModel.showLineList) {
             LineListView()
                 .environment(viewModel)

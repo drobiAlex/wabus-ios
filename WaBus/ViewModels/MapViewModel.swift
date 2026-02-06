@@ -15,6 +15,7 @@ final class MapViewModel {
     var showBuses = true { didSet { recomputeFiltered() } }
     var showTrams = true { didSet { recomputeFiltered() } }
     var selectedVehicle: Vehicle?
+    var selectedStop: Stop?
     var connectionState: ConnectionState = .disconnected
     var selectedLines: Set<String> = [] { didSet { recomputeFiltered() } }
     var showLineList = false
@@ -137,7 +138,7 @@ final class MapViewModel {
         routeFetchTasks[line] = Task {
             await loadAllStopsIfNeeded()
             do {
-                let shapes = try await GTFSAPIService.fetchRouteShape(line: line)
+                let shapes = try await WaBusClient.shared.getRouteShape(line: line)
                 guard !Task.isCancelled else { return }
                 routeShapesCache[line] = shapes
                 routeStopsCache[line] = stopsNearShapes(shapes)
@@ -151,7 +152,7 @@ final class MapViewModel {
     private func loadAllStopsIfNeeded() async {
         guard allStops.isEmpty else { return }
         do {
-            allStops = try await GTFSAPIService.fetchAllStops()
+            allStops = try await WaBusClient.shared.getStops()
         } catch {
             // Silently skip
         }
@@ -185,12 +186,9 @@ final class MapViewModel {
             let type = vehicleTypeForLine(line)
             if let shapes = routeShapesCache[line] {
                 for shape in shapes {
-                    let coords = shape.points
-                        .sorted { $0.sequence < $1.sequence }
-                        .map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
                     polylines.append(RoutePolyline(
                         id: shape.id,
-                        coordinates: coords,
+                        coordinates: shape.coordinates,
                         color: type?.color ?? .blue
                     ))
                 }
@@ -430,7 +428,7 @@ final class MapViewModel {
         var updated = vehicles
         for fav in favLines {
             do {
-                let fetched = try await VehicleAPIService.fetchVehicles(line: fav.line)
+                let fetched = try await WaBusClient.shared.getVehicles(line: fav.line)
                 for vehicle in fetched {
                     updated[vehicle.key] = vehicle
                 }
