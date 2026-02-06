@@ -124,8 +124,10 @@ final class WaBusClient: Sendable {
         try await fetch(.stop(id: id))
     }
 
-    func getStopSchedule(id: String) async throws -> [StopTime] {
-        let response: StopScheduleResponse = try await fetch(.stopSchedule(id: id))
+    func getStopSchedule(id: String, date: String? = "today") async throws -> [StopTime] {
+        var queryItems: [URLQueryItem] = []
+        if let date { queryItems.append(URLQueryItem(name: "date", value: date)) }
+        let response: StopScheduleResponse = try await fetch(.stopSchedule(id: id), queryItems: queryItems)
         return response.stopTimes
     }
 

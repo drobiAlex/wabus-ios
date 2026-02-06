@@ -28,8 +28,14 @@ struct VehicleRouteBar: View {
 
             // Vehicle info
             VStack(alignment: .leading, spacing: 2) {
-                Text("Line \(vehicle.line)")
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                HStack(spacing: 6) {
+                    Text("Line \(vehicle.line)")
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    if viewModel.isLoadingRoute {
+                        ProgressView()
+                            .controlSize(.mini)
+                    }
+                }
                 Text(vehicle.vehicleNumber)
                     .font(.system(size: 12, weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)

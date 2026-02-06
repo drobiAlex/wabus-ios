@@ -20,6 +20,15 @@ struct StopTime: Codable, Identifiable, Sendable {
         case stopSequence = "stop_sequence"
     }
 
+    /// Arrival time without seconds, e.g. "14:30" or "25:30" → "1:30".
+    var displayTime: String {
+        let parts = arrivalTime.split(separator: ":").compactMap { Int($0) }
+        guard parts.count >= 2 else { return arrivalTime }
+        var h = parts[0]
+        if h >= 24 { h -= 24 }
+        return String(format: "%d:%02d", h, parts[1])
+    }
+
     /// Parses GTFS time strings that may exceed 24:00:00 (e.g. "25:30:00").
     /// Returns a Date for today (or tomorrow if hours >= 24).
     var arrivalDate: Date? {

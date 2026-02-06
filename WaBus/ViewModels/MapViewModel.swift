@@ -16,6 +16,7 @@ final class MapViewModel {
     var showTrams = true { didSet { recomputeFiltered() } }
     var selectedVehicle: Vehicle?
     var showVehicleDetail = false
+    var isLoadingRoute = false
     var selectedStop: Stop?
     var connectionState: ConnectionState = .disconnected
     var selectedLines: Set<String> = [] { didSet { recomputeFiltered() } }
@@ -163,6 +164,7 @@ final class MapViewModel {
             rebuildRouteOverlays()
             return
         }
+        isLoadingRoute = true
         routeFetchTasks[line] = Task {
             await loadAllStopsIfNeeded()
             do {
@@ -174,6 +176,7 @@ final class MapViewModel {
             } catch {
                 // Silently skip failed fetches
             }
+            isLoadingRoute = false
         }
     }
 
@@ -216,6 +219,9 @@ final class MapViewModel {
             linesToShow.insert(vehicleLine)
         }
 
+        // When a vehicle is selected, only show stops for its line
+        let stopsOnlyForLine = selectedVehicle?.line
+
         for line in linesToShow {
             let type = vehicleTypeForLine(line)
             if let shapes = routeShapesCache[line] {
@@ -227,10 +233,12 @@ final class MapViewModel {
                     ))
                 }
             }
-            if let lineStops = routeStopsCache[line] {
-                for stop in lineStops {
-                    if seenStopIds.insert(stop.id).inserted {
-                        stops.append(stop)
+            if stopsOnlyForLine == nil || line == stopsOnlyForLine {
+                if let lineStops = routeStopsCache[line] {
+                    for stop in lineStops {
+                        if seenStopIds.insert(stop.id).inserted {
+                            stops.append(stop)
+                        }
                     }
                 }
             }
@@ -398,7 +406,9 @@ final class MapViewModel {
 
         vehicles = updatedVehicles
         headings = updatedHeadings
-        recomputeFiltered()
+        withAnimation(.easeInOut(duration: 0.8)) {
+            recomputeFiltered()
+        }
         recomputeAvailableLines()
     }
 
@@ -436,7 +446,9 @@ final class MapViewModel {
 
         vehicles = updatedVehicles
         headings = updatedHeadings
-        recomputeFiltered()
+        withAnimation(.easeInOut(duration: 0.8)) {
+            recomputeFiltered()
+        }
 
         if linesChanged || !removes.isEmpty {
             recomputeAvailableLines()

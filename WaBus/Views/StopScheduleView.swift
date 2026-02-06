@@ -13,12 +13,15 @@ struct StopScheduleView: View {
         return allArrivals.filter { $0.line == selectedLine }
     }
 
+    private var lineColors: [String: Color] {
+        Dictionary(uniqueKeysWithValues: lines.map { ($0.line, $0.displayColor) })
+    }
+
     var body: some View {
         NavigationStack {
             Group {
                 if isLoading {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    ScheduleSkeletonView()
                 } else {
                     List {
                         if !lines.isEmpty {
@@ -64,22 +67,28 @@ struct StopScheduleView: View {
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text(arrival.headsign)
                                                 .font(.subheadline)
-                                            Text(arrival.arrivalTime)
-                                                .font(.caption)
+                                            Text(arrival.displayTime)
+                                                .font(.system(size: 14, weight: .medium, design: .rounded))
                                                 .foregroundStyle(.secondary)
                                         }
 
                                         Spacer()
 
                                         if let date = arrival.arrivalDate {
-                                            let minutes = Int(date.timeIntervalSinceNow / 60)
-                                            if minutes <= 0 {
+                                            let totalMinutes = Int(date.timeIntervalSinceNow / 60)
+                                            if totalMinutes <= 0 {
                                                 Text("Now")
-                                                    .font(.subheadline.bold())
+                                                    .font(.system(size: 15, weight: .bold, design: .rounded))
                                                     .foregroundStyle(.green)
+                                            } else if totalMinutes < 60 {
+                                                Text("\(totalMinutes) min")
+                                                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                                                    .foregroundStyle(.blue)
                                             } else {
-                                                Text("\(minutes) min")
-                                                    .font(.subheadline.bold())
+                                                let h = totalMinutes / 60
+                                                let m = totalMinutes % 60
+                                                Text(String(format: "%d:%02d", h, m))
+                                                    .font(.system(size: 15, weight: .bold, design: .rounded))
                                                     .foregroundStyle(.blue)
                                             }
                                         }
