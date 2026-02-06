@@ -105,6 +105,10 @@ struct StopScheduleView: View {
             }
             .navigationTitle(stop.name)
             .navigationBarTitleDisplayMode(.inline)
+            .refreshable {
+                await ScheduleService.shared.clearCache(for: stop.id)
+                await loadData()
+            }
         }
         .task {
             await loadData()
@@ -113,11 +117,11 @@ struct StopScheduleView: View {
 
     private func loadData() async {
         async let fetchedLines: [StopLine] = {
-            do { return try await WaBusClient.shared.getStopLines(id: stop.id) }
+            do { return try await ScheduleService.shared.getStopLines(stopId: stop.id) }
             catch { return [] }
         }()
         async let fetchedSchedule: [StopTime] = {
-            do { return try await WaBusClient.shared.getStopSchedule(id: stop.id) }
+            do { return try await ScheduleService.shared.getUpcomingArrivals(stopId: stop.id, minutes: 120) }
             catch { return [] }
         }()
 
@@ -127,23 +131,14 @@ struct StopScheduleView: View {
         var seenLines = Set<String>()
         let uniqueLines = linesResult.filter { seenLines.insert($0.line).inserted }
 
-        // Deduplicate arrivals by tripId and filter to future only
-        let now = Date()
+        // Deduplicate arrivals by tripId
         var seenTrips = Set<String>()
-        let futureArrivals = scheduleResult
+        let uniqueArrivals = scheduleResult
             .filter { seenTrips.insert($0.tripId).inserted }
-            .filter { stopTime in
-                guard let date = stopTime.arrivalDate else { return false }
-                return date > now
-            }
-            .sorted { a, b in
-                guard let da = a.arrivalDate, let db = b.arrivalDate else { return false }
-                return da < db
-            }
             .prefix(20)
 
         lines = uniqueLines
-        allArrivals = Array(futureArrivals)
+        allArrivals = Array(uniqueArrivals)
         isLoading = false
     }
 }

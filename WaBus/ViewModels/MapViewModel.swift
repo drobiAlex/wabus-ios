@@ -51,10 +51,10 @@ final class MapViewModel {
     private var wsStateTask: Task<Void, Never>?
     private var favouriteRefreshTask: Task<Void, Never>?
     private var _lineTypeKeys: Set<String> = []
-    private var allStops: [Stop] = []
     private var routeShapesCache: [String: [RouteShape]] = [:]
     private var routeStopsCache: [String: [Stop]] = [:]
     private var routeFetchTasks: [String: Task<Void, Never>] = [:]
+    private var selectedVehicleShapes: [RouteShape]?
 
     // MARK: - Lifecycle
 
@@ -103,7 +103,7 @@ final class MapViewModel {
                 routeFetchTasks[prev]?.cancel()
                 routeFetchTasks[prev] = nil
             }
-            fetchRouteDataIfNeeded(for: vehicle.line)
+            fetchVehicleRouteData(for: vehicle.line)
         }
     }
 
@@ -113,6 +113,7 @@ final class MapViewModel {
             routeFetchTasks[line] = nil
         }
         selectedVehicle = nil
+        selectedVehicleShapes = nil
         showVehicleDetail = false
         rebuildRouteOverlays()
     }
@@ -166,12 +167,13 @@ final class MapViewModel {
         }
         isLoadingRoute = true
         routeFetchTasks[line] = Task {
-            await loadAllStopsIfNeeded()
             do {
-                let shapes = try await WaBusClient.shared.getRouteShape(line: line)
+                async let shapesReq = WaBusClient.shared.getRouteShape(line: line)
+                async let stopsReq = WaBusClient.shared.getRouteStops(line: line)
+                let (shapes, stops) = try await (shapesReq, stopsReq)
                 guard !Task.isCancelled else { return }
                 routeShapesCache[line] = shapes
-                routeStopsCache[line] = stopsNearShapes(shapes)
+                routeStopsCache[line] = stops
                 rebuildRouteOverlays()
             } catch {
                 // Silently skip failed fetches
@@ -180,31 +182,24 @@ final class MapViewModel {
         }
     }
 
-    private func loadAllStopsIfNeeded() async {
-        guard allStops.isEmpty else { return }
-        do {
-            allStops = try await WaBusClient.shared.getStops()
-        } catch {
-            // Silently skip
-        }
-    }
-
-    private func stopsNearShapes(_ shapes: [RouteShape]) -> [Stop] {
-        guard !allStops.isEmpty else { return [] }
-        var shapeLocations: [CLLocation] = []
-        for shape in shapes {
-            let pts = shape.points
-            let step = max(1, pts.count / 200)
-            for i in stride(from: 0, to: pts.count, by: step) {
-                shapeLocations.append(CLLocation(latitude: pts[i].lat, longitude: pts[i].lon))
+    private func fetchVehicleRouteData(for line: String) {
+        isLoadingRoute = true
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        let timeStr = formatter.string(from: Date())
+        routeFetchTasks[line] = Task {
+            do {
+                async let shapesReq = WaBusClient.shared.getRouteShape(line: line, time: timeStr)
+                async let stopsReq = WaBusClient.shared.getRouteStops(line: line)
+                let (shapes, stops) = try await (shapesReq, stopsReq)
+                guard !Task.isCancelled else { return }
+                selectedVehicleShapes = shapes
+                routeStopsCache[line] = stops
+                rebuildRouteOverlays()
+            } catch {
+                // Silently skip failed fetches
             }
-            if let last = pts.last {
-                shapeLocations.append(CLLocation(latitude: last.lat, longitude: last.lon))
-            }
-        }
-        return allStops.filter { stop in
-            let stopLoc = CLLocation(latitude: stop.lat, longitude: stop.lon)
-            return shapeLocations.contains { $0.distance(from: stopLoc) <= 80 }
+            isLoadingRoute = false
         }
     }
 
@@ -224,7 +219,13 @@ final class MapViewModel {
 
         for line in linesToShow {
             let type = vehicleTypeForLine(line)
-            if let shapes = routeShapesCache[line] {
+            let shapes: [RouteShape]?
+            if line == selectedVehicle?.line, let vehicleShapes = selectedVehicleShapes {
+                shapes = vehicleShapes
+            } else {
+                shapes = routeShapesCache[line]
+            }
+            if let shapes {
                 for shape in shapes {
                     polylines.append(RoutePolyline(
                         id: shape.id,
