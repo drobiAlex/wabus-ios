@@ -17,7 +17,13 @@ struct MapContentView: View {
                 }
             }
 
-            ForEach(viewModel.filteredVehicles, id: \.key) { vehicle in
+            ForEach(viewModel.vehicleClusters) { cluster in
+                Annotation("\(cluster.count)", coordinate: cluster.coordinate) {
+                    ClusterAnnotationView(cluster: cluster)
+                }
+            }
+
+            ForEach(viewModel.singleVehicles, id: \.key) { vehicle in
                 Annotation(vehicle.line, coordinate: vehicle.coordinate) {
                     VehicleAnnotationView(vehicle: vehicle, heading: viewModel.headings[vehicle.key])
                         .onTapGesture {

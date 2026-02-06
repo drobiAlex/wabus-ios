@@ -53,3 +53,10 @@ struct RoutePolyline: Identifiable {
     let coordinates: [CLLocationCoordinate2D]
     let color: Color
 }
+
+struct VehicleCluster: Identifiable {
+    let id: String
+    let coordinate: CLLocationCoordinate2D
+    let count: Int
+    let type: VehicleType
+}

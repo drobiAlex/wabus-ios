@@ -33,6 +33,11 @@ final class MapViewModel {
     private(set) var activeRoutePolylines: [RoutePolyline] = []
     private(set) var activeRouteStops: [Stop] = []
 
+    // MARK: - Clustering
+
+    private(set) var singleVehicles: [Vehicle] = []
+    private(set) var vehicleClusters: [VehicleCluster] = []
+
     private static let maxAnnotations = 150
 
     // MARK: - Private
@@ -86,6 +91,7 @@ final class MapViewModel {
 
     func onMapRegionChanged(_ region: MKCoordinateRegion) {
         visibleRegion = region
+        clusterVehicles(filteredVehicles)
         regionDebounceTask?.cancel()
         regionDebounceTask = Task {
             try? await Task.sleep(for: .milliseconds(300))
@@ -255,6 +261,49 @@ final class MapViewModel {
         }
 
         filteredVehicles = all
+        clusterVehicles(all)
+    }
+
+    private func clusterVehicles(_ vehicles: [Vehicle]) {
+        guard let region = visibleRegion else {
+            singleVehicles = vehicles
+            vehicleClusters = []
+            return
+        }
+
+        let gridSize = 10
+        let cellW = region.span.longitudeDelta / Double(gridSize)
+        let cellH = region.span.latitudeDelta / Double(gridSize)
+        let minLat = region.center.latitude - region.span.latitudeDelta / 2
+        let minLon = region.center.longitude - region.span.longitudeDelta / 2
+
+        var grid: [Int: [Vehicle]] = [:]
+        for v in vehicles {
+            let col = min(gridSize - 1, max(0, Int((v.lon - minLon) / cellW)))
+            let row = min(gridSize - 1, max(0, Int((v.lat - minLat) / cellH)))
+            grid[row * gridSize + col, default: []].append(v)
+        }
+
+        var singles: [Vehicle] = []
+        var clusters: [VehicleCluster] = []
+        for (key, cell) in grid {
+            if cell.count == 1 {
+                singles.append(cell[0])
+            } else {
+                let avgLat = cell.reduce(0.0) { $0 + $1.lat } / Double(cell.count)
+                let avgLon = cell.reduce(0.0) { $0 + $1.lon } / Double(cell.count)
+                var bc = 0
+                for v in cell where v.type == .bus { bc += 1 }
+                clusters.append(VehicleCluster(
+                    id: "cl-\(key)",
+                    coordinate: CLLocationCoordinate2D(latitude: avgLat, longitude: avgLon),
+                    count: cell.count,
+                    type: bc >= cell.count - bc ? .bus : .tram
+                ))
+            }
+        }
+        singleVehicles = singles
+        vehicleClusters = clusters
     }
 
     private func recomputeAvailableLines() {
