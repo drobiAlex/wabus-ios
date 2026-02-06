@@ -258,6 +258,16 @@ final class MapViewModel {
     // MARK: - Recompute
 
     private func recomputeFiltered() {
+        // When a vehicle is selected, only show that one vehicle
+        if let selected = selectedVehicle, let current = vehicles[selected.key] {
+            selectedVehicle = current
+            filteredVehicles = [current]
+            singleVehicles = [current]
+            vehicleClusters = []
+            updateCounts()
+            return
+        }
+
         let favLines = Set(favouritesStore.lines.map(\.line))
         let showB = showBuses
         let showT = showTrams
@@ -274,17 +284,7 @@ final class MapViewModel {
             return true
         }
 
-        // Counts before capping
-        var bc = 0
-        var tc = 0
-        for v in all {
-            switch v.type {
-            case .bus: bc += 1
-            case .tram: tc += 1
-            }
-        }
-        busCount = bc
-        tramCount = tc
+        updateCounts(from: all)
 
         // Cap annotations for map performance
         if all.count > Self.maxAnnotations {
@@ -302,6 +302,20 @@ final class MapViewModel {
 
         filteredVehicles = all
         clusterVehicles(all)
+    }
+
+    private func updateCounts(from list: [Vehicle]? = nil) {
+        let source = list ?? Array(vehicles.values)
+        var bc = 0
+        var tc = 0
+        for v in source {
+            switch v.type {
+            case .bus: bc += 1
+            case .tram: tc += 1
+            }
+        }
+        busCount = bc
+        tramCount = tc
     }
 
     private func clusterVehicles(_ vehicles: [Vehicle]) {

@@ -62,7 +62,7 @@ struct StopScheduleView: View {
                                             .foregroundStyle(.white)
                                             .frame(width: 44)
                                             .padding(.vertical, 4)
-                                            .background(.blue, in: RoundedRectangle(cornerRadius: 6))
+                                            .background(lineColors[arrival.line] ?? .blue, in: RoundedRectangle(cornerRadius: 6))
 
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text(arrival.headsign)
