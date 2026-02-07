@@ -19,8 +19,8 @@ struct ContentView: View {
                 HStack {
                     Spacer()
                     ConnectionStatusView(state: viewModel.connectionState)
-                        .padding(.top, 8)
-                        .padding(.trailing, 16)
+                        .padding(.top, DS.Spacing.sm)
+                        .padding(.trailing, DS.Spacing.md)
                 }
                 Spacer()
 
@@ -28,11 +28,11 @@ struct ContentView: View {
                     VehicleRouteBar(vehicle: vehicle)
                         .environment(viewModel)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
-                        .padding(.bottom, 4)
+                        .padding(.bottom, DS.Spacing.sm)
                 }
 
-                FilterBarView(viewModel: viewModel)
-                    .padding(.bottom, 8)
+                FilterBarView(viewModel: viewModel, dimmed: viewModel.selectedVehicle != nil)
+                    .padding(.bottom, DS.Spacing.sm)
             }
         }
         .sheet(isPresented: $viewModel.showVehicleDetail) {

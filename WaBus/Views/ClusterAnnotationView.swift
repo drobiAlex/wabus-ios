@@ -6,13 +6,16 @@ struct ClusterAnnotationView: View {
     var body: some View {
         ZStack {
             Circle()
-                .fill(cluster.type.color.opacity(0.85))
+                .fill(cluster.type.color)
                 .frame(width: 40, height: 40)
-            Text("\(cluster.count)")
-                .font(.system(size: 14, weight: .bold, design: .rounded))
+            Text(cluster.count > 99 ? "99+" : "\(cluster.count)")
+                .font(DS.smallBold)
                 .foregroundStyle(.white)
+                .minimumScaleFactor(0.6)
         }
-        .frame(minWidth: 44, minHeight: 44)
+        .frame(minWidth: DS.Size.minTapTarget, minHeight: DS.Size.minTapTarget)
         .contentShape(Circle())
+        .accessibilityLabel("\(cluster.count) vehicles clustered")
+        .accessibilityHint("Double tap to zoom in.")
     }
 }

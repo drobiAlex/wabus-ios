@@ -7,17 +7,20 @@ struct StopAnnotationView: View {
         ZStack {
             Circle()
                 .fill(.white)
-                .frame(width: 22, height: 22)
-                .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
+                .frame(width: 24, height: 24)
+                .shadow(color: .black.opacity(0.25), radius: 3, y: 2)
 
             Circle()
                 .strokeBorder(Color.blue, lineWidth: 2.5)
-                .frame(width: 22, height: 22)
+                .frame(width: 24, height: 24)
 
-            Image(systemName: "bus.fill")
-                .font(.system(size: 10, weight: .bold))
+            Image(systemName: "mappin.circle.fill")
+                .font(.system(size: 12, weight: .bold))
                 .foregroundStyle(.blue)
         }
-        .frame(minWidth: 32, minHeight: 32)
+        .frame(minWidth: DS.Size.minTapTarget, minHeight: DS.Size.minTapTarget)
+        .contentShape(Rectangle())
+        .accessibilityLabel("Stop: \(stop.name)")
+        .accessibilityHint("Double tap to view schedule.")
     }
 }

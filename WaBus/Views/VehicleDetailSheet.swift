@@ -10,12 +10,13 @@ struct VehicleDetailSheet: View {
     }
 
     var body: some View {
-        VStack(spacing: 20) {
-            VStack(spacing: 8) {
+        VStack(spacing: DS.Spacing.lg) {
+            // Header badge
+            VStack(spacing: DS.Spacing.sm) {
                 ZStack {
                     Circle()
                         .fill(vehicle.type.color)
-                        .frame(width: 72, height: 72)
+                        .frame(width: DS.Size.detailBadge, height: DS.Size.detailBadge)
 
                     VStack(spacing: 2) {
                         Image(systemName: vehicle.type.systemImage)
@@ -27,17 +28,17 @@ struct VehicleDetailSheet: View {
                 }
 
                 Text(vehicle.type.label)
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .font(DS.small)
                     .foregroundStyle(.secondary)
             }
 
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                infoCard(title: "Vehicle", value: vehicle.vehicleNumber)
-                infoCard(title: "Brigade", value: vehicle.brigade)
-                infoCard(title: "Updated", value: vehicle.updatedAt.formatted(.relative(presentation: .named)))
-                infoCard(title: "Coordinates", value: String(format: "%.4f, %.4f", vehicle.lat, vehicle.lon))
+            // Key info
+            VStack(spacing: DS.Spacing.sm) {
+                infoRow(title: "Vehicle", value: vehicle.vehicleNumber, icon: "number")
+                infoRow(title: "Updated", value: vehicle.updatedAt.formatted(.relative(presentation: .named)), icon: "clock")
             }
 
+            // Favourite button — icon-only star, consistent with route bar
             Button {
                 let fav = FavouriteLine(line: vehicle.line, type: vehicle.type)
                 if isFavourite {
@@ -45,58 +46,65 @@ struct VehicleDetailSheet: View {
                 } else {
                     viewModel.addFavourite(fav)
                 }
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
+                withAnimation(DS.spring) {
                     starScale = 1.3
                 }
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.5).delay(0.15)) {
+                withAnimation(DS.spring.delay(0.15)) {
                     starScale = 1.0
                 }
             } label: {
-                HStack(spacing: 8) {
+                HStack(spacing: DS.Spacing.sm) {
                     Image(systemName: isFavourite ? "star.fill" : "star")
                         .scaleEffect(starScale)
                     Text(isFavourite ? "Favourited" : "Add to Favourites")
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .font(DS.bodyBold)
                 }
                 .foregroundStyle(isFavourite ? .white : .primary)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
+                .padding(.vertical, DS.Spacing.sm + DS.Spacing.xs)
                 .background {
                     if isFavourite {
-                        RoundedRectangle(cornerRadius: 14)
+                        RoundedRectangle(cornerRadius: DS.Radius.sm)
                             .fill(vehicle.type.color)
                     } else {
-                        RoundedRectangle(cornerRadius: 14)
+                        RoundedRectangle(cornerRadius: DS.Radius.sm)
                             .fill(Color(.quaternarySystemFill))
                             .overlay(
-                                RoundedRectangle(cornerRadius: 14)
+                                RoundedRectangle(cornerRadius: DS.Radius.sm)
                                     .strokeBorder(vehicle.type.color.opacity(0.4), lineWidth: 1.5)
                             )
                     }
                 }
             }
             .sensoryFeedback(.selection, trigger: isFavourite)
+            .accessibilityLabel(isFavourite ? "Remove from favourites" : "Add to favourites")
         }
-        .padding(20)
-        .presentationDetents([.medium])
+        .padding(DS.Spacing.lg)
+        .presentationDetents([.height(340)])
         .presentationDragIndicator(.visible)
     }
 
-    private func infoCard(title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title.uppercased())
-                .font(.system(size: 10, weight: .semibold, design: .rounded))
+    private func infoRow(title: String, value: String, icon: String) -> some View {
+        HStack(spacing: DS.Spacing.sm + DS.Spacing.xs) {
+            Image(systemName: icon)
+                .font(DS.body)
                 .foregroundStyle(.secondary)
-                .tracking(0.5)
-            Text(value)
-                .font(.system(size: 14, weight: .medium, design: .rounded))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title.uppercased())
+                    .font(DS.captionBold)
+                    .foregroundStyle(.tertiary)
+                    .tracking(0.5)
+                Text(value)
+                    .font(DS.body)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            Spacer()
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
+        .padding(DS.Spacing.sm + DS.Spacing.xs)
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: DS.Radius.sm)
                 .fill(Color(.quaternarySystemFill))
         )
     }

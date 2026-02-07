@@ -1,9 +1,11 @@
 import MapKit
+import os
 import SwiftUI
 
 @Observable
 @MainActor
 final class MapViewModel {
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "WaBus", category: "MapVM")
     // MARK: - State
 
     private var vehicles: [String: Vehicle] = [:]
@@ -51,10 +53,11 @@ final class MapViewModel {
     private var wsStateTask: Task<Void, Never>?
     private var favouriteRefreshTask: Task<Void, Never>?
     private var _lineTypeKeys: Set<String> = []
-    private var routeShapesCache: [String: [RouteShape]] = [:]
-    private var routeStopsCache: [String: [Stop]] = [:]
+    private var routeShapesCache: [String: (shapes: [RouteShape], fetchedAt: Date)] = [:]
+    private var routeStopsCache: [String: (stops: [Stop], fetchedAt: Date)] = [:]
     private var routeFetchTasks: [String: Task<Void, Never>] = [:]
     private var selectedVehicleShapes: [RouteShape]?
+    private let routeCacheTTL: TimeInterval = 600 // 10 minutes
 
     // MARK: - Lifecycle
 
@@ -118,6 +121,19 @@ final class MapViewModel {
         rebuildRouteOverlays()
     }
 
+    // MARK: - Cluster Zoom
+
+    func zoomToCluster(_ cluster: VehicleCluster) {
+        guard let region = visibleRegion else { return }
+        let newSpan = MKCoordinateSpan(
+            latitudeDelta: region.span.latitudeDelta / 2.5,
+            longitudeDelta: region.span.longitudeDelta / 2.5
+        )
+        withAnimation(DS.springHeavy) {
+            cameraPosition = .region(MKCoordinateRegion(center: cluster.coordinate, span: newSpan))
+        }
+    }
+
     // MARK: - Map Region
 
     func onMapRegionChanged(_ region: MKCoordinateRegion) {
@@ -161,7 +177,7 @@ final class MapViewModel {
     // MARK: - Route Data
 
     private func fetchRouteDataIfNeeded(for line: String) {
-        guard routeShapesCache[line] == nil else {
+        if let cached = routeShapesCache[line], Date().timeIntervalSince(cached.fetchedAt) < routeCacheTTL {
             rebuildRouteOverlays()
             return
         }
@@ -172,11 +188,11 @@ final class MapViewModel {
                 async let stopsReq = WaBusClient.shared.getRouteStops(line: line)
                 let (shapes, stops) = try await (shapesReq, stopsReq)
                 guard !Task.isCancelled else { return }
-                routeShapesCache[line] = shapes
-                routeStopsCache[line] = stops
+                routeShapesCache[line] = (shapes, Date())
+                routeStopsCache[line] = (stops, Date())
                 rebuildRouteOverlays()
             } catch {
-                // Silently skip failed fetches
+                logger.warning("Failed to fetch route data for line \(line): \(error.localizedDescription)")
             }
             isLoadingRoute = false
         }
@@ -194,10 +210,10 @@ final class MapViewModel {
                 let (shapes, stops) = try await (shapesReq, stopsReq)
                 guard !Task.isCancelled else { return }
                 selectedVehicleShapes = shapes
-                routeStopsCache[line] = stops
+                routeStopsCache[line] = (stops, Date())
                 rebuildRouteOverlays()
             } catch {
-                // Silently skip failed fetches
+                logger.warning("Failed to fetch vehicle route for line \(line): \(error.localizedDescription)")
             }
             isLoadingRoute = false
         }
@@ -223,7 +239,7 @@ final class MapViewModel {
             if line == selectedVehicle?.line, let vehicleShapes = selectedVehicleShapes {
                 shapes = vehicleShapes
             } else {
-                shapes = routeShapesCache[line]
+                shapes = routeShapesCache[line]?.shapes
             }
             if let shapes {
                 for shape in shapes {
@@ -235,7 +251,7 @@ final class MapViewModel {
                 }
             }
             if stopsOnlyForLine == nil || line == stopsOnlyForLine {
-                if let lineStops = routeStopsCache[line] {
+                if let lineStops = routeStopsCache[line]?.stops {
                     for stop in lineStops {
                         if seenStopIds.insert(stop.id).inserted {
                             stops.append(stop)
@@ -475,7 +491,7 @@ final class MapViewModel {
     private func startFavouriteRefresh() {
         favouriteRefreshTask = Task {
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(30))
+                try? await Task.sleep(for: .seconds(60))
                 guard !Task.isCancelled else { return }
                 await refreshFavouriteVehicles()
             }
@@ -494,7 +510,7 @@ final class MapViewModel {
                     updated[vehicle.key] = vehicle
                 }
             } catch {
-                // Silently skip failed fetches
+                logger.debug("Failed to refresh favourite line \(fav.line): \(error.localizedDescription)")
             }
         }
         vehicles = updated

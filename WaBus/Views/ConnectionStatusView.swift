@@ -8,7 +8,7 @@ struct ConnectionStatusView: View {
         HStack(spacing: 6) {
             Circle()
                 .fill(dotColor)
-                .frame(width: 8, height: 8)
+                .frame(width: state == .connected ? 12 : 8, height: state == .connected ? 12 : 8)
                 .opacity(state == .connecting ? (pulsing ? 0.3 : 1.0) : 1.0)
                 .animation(
                     state == .connecting
@@ -17,25 +17,35 @@ struct ConnectionStatusView: View {
                     value: pulsing
                 )
 
+            if state == .connected {
+                Text("Live")
+                    .font(DS.captionBold)
+                    .foregroundStyle(.green)
+                    .transition(.opacity.combined(with: .move(edge: .leading)))
+            }
+
             if state == .disconnected {
                 Text("Reconnecting...")
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .font(DS.captionBold)
                     .foregroundStyle(.white)
                     .transition(.opacity.combined(with: .move(edge: .leading)))
             }
         }
-        .padding(.horizontal, state == .disconnected ? 12 : 6)
-        .padding(.vertical, state == .disconnected ? 6 : 6)
+        .padding(.horizontal, state == .connected ? DS.Spacing.sm + DS.Spacing.xs : (state == .disconnected ? DS.Spacing.sm + DS.Spacing.xs : 6))
+        .padding(.vertical, 6)
         .background {
             if state == .disconnected {
-                Capsule().fill(Color.red.opacity(0.85))
+                Capsule().fill(Color.orange.opacity(0.85))
             } else {
                 Capsule().fill(.ultraThinMaterial)
             }
         }
         .clipShape(Capsule())
-        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: state)
+        .animation(DS.springHeavy, value: state)
+        .frame(minWidth: DS.Size.minTapTarget, minHeight: DS.Size.minTapTarget)
         .onAppear { pulsing = true }
+        .accessibilityLabel("Connection status")
+        .accessibilityValue(accessibilityStateValue)
     }
 
     private var dotColor: Color {
@@ -43,6 +53,14 @@ struct ConnectionStatusView: View {
         case .connected: .green
         case .connecting: .yellow
         case .disconnected: .white
+        }
+    }
+
+    private var accessibilityStateValue: String {
+        switch state {
+        case .connected: "connected"
+        case .connecting: "connecting"
+        case .disconnected: "reconnecting"
         }
     }
 }

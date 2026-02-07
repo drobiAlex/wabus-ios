@@ -14,7 +14,7 @@ struct StopScheduleView: View {
     }
 
     private var lineColors: [String: Color] {
-        Dictionary(uniqueKeysWithValues: lines.map { ($0.line, $0.displayColor) })
+        Dictionary(uniqueKeysWithValues: lines.map { ($0.line, $0.type.color) })
     }
 
     var body: some View {
@@ -25,80 +25,93 @@ struct StopScheduleView: View {
                 } else {
                     List {
                         if !lines.isEmpty {
-                            Section("Lines at this stop") {
+                            Section {
                                 ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 8) {
+                                    HStack(spacing: DS.Spacing.sm) {
+                                        // "All" pill
+                                        Button {
+                                            withAnimation(DS.spring) {
+                                                selectedLine = nil
+                                            }
+                                        } label: {
+                                            Text("All")
+                                                .font(.headline)
+                                                .foregroundStyle(selectedLine == nil ? .white : .secondary)
+                                                .padding(.horizontal, DS.Spacing.sm + DS.Spacing.xs)
+                                                .padding(.vertical, 6)
+                                                .background(
+                                                    selectedLine == nil ? Color.blue : Color.blue.opacity(0.15),
+                                                    in: RoundedRectangle(cornerRadius: DS.Radius.sm)
+                                                )
+                                        }
+                                        .buttonStyle(.plain)
+                                        .accessibilityLabel("Show all lines")
+                                        .accessibilityValue(selectedLine == nil ? "selected" : "not selected")
+
                                         ForEach(lines) { line in
                                             let isSelected = selectedLine == line.line
                                             Button {
-                                                withAnimation {
+                                                withAnimation(DS.spring) {
                                                     selectedLine = isSelected ? nil : line.line
                                                 }
                                             } label: {
                                                 Text(line.line)
                                                     .font(.headline)
-                                                    .foregroundStyle(isSelected ? .white : line.displayColor)
-                                                    .padding(.horizontal, 10)
+                                                    .foregroundStyle(isSelected ? .white : line.type.color)
+                                                    .padding(.horizontal, DS.Spacing.sm + DS.Spacing.xs)
                                                     .padding(.vertical, 6)
                                                     .background(
-                                                        isSelected ? line.displayColor : line.displayColor.opacity(0.15),
-                                                        in: RoundedRectangle(cornerRadius: 8)
+                                                        isSelected ? line.type.color : line.type.color.opacity(0.15),
+                                                        in: RoundedRectangle(cornerRadius: DS.Radius.sm)
                                                     )
                                             }
                                             .buttonStyle(.plain)
+                                            .accessibilityLabel("Line \(line.line)")
+                                            .accessibilityValue(isSelected ? "selected" : "not selected")
                                         }
                                     }
-                                    .padding(.vertical, 4)
+                                    .padding(.vertical, DS.Spacing.xs)
                                 }
+                            } header: {
+                                Text("Lines at this stop")
                             }
                         }
 
                         if !filteredArrivals.isEmpty {
-                            Section(selectedLine != nil ? "Arrivals for \(selectedLine!)" : "Upcoming Arrivals") {
+                            Section {
                                 ForEach(filteredArrivals) { arrival in
-                                    HStack {
-                                        Text(arrival.line)
-                                            .font(.headline)
-                                            .foregroundStyle(.white)
-                                            .frame(width: 44)
-                                            .padding(.vertical, 4)
-                                            .background(lineColors[arrival.line] ?? .blue, in: RoundedRectangle(cornerRadius: 6))
-
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(arrival.headsign)
-                                                .font(.subheadline)
-                                            Text(arrival.displayTime)
-                                                .font(.system(size: 14, weight: .medium, design: .rounded))
-                                                .foregroundStyle(.secondary)
-                                        }
-
+                                    arrivalRow(arrival)
+                                }
+                            } header: {
+                                HStack {
+                                    if let selectedLine {
+                                        Text("Arrivals for \(selectedLine)")
                                         Spacer()
-
-                                        if let date = arrival.arrivalDate {
-                                            let totalMinutes = Int(date.timeIntervalSinceNow / 60)
-                                            if totalMinutes <= 0 {
-                                                Text("Now")
-                                                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                                                    .foregroundStyle(.green)
-                                            } else if totalMinutes < 60 {
-                                                Text("\(totalMinutes) min")
-                                                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                                                    .foregroundStyle(.blue)
-                                            } else {
-                                                let h = totalMinutes / 60
-                                                let m = totalMinutes % 60
-                                                Text(String(format: "%d:%02d", h, m))
-                                                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                                                    .foregroundStyle(.blue)
+                                        Button("Clear") {
+                                            withAnimation(DS.spring) {
+                                                self.selectedLine = nil
                                             }
                                         }
+                                        .font(DS.small)
+                                    } else {
+                                        Text("Upcoming Arrivals")
                                     }
                                 }
                             }
                         }
 
                         if lines.isEmpty && allArrivals.isEmpty {
-                            ContentUnavailableView("No Schedule", systemImage: "calendar.badge.exclamationmark", description: Text("No schedule data available for this stop."))
+                            ContentUnavailableView(
+                                "No Upcoming Arrivals",
+                                systemImage: "calendar.badge.exclamationmark",
+                                description: Text("No scheduled arrivals in the next 2 hours for this stop.")
+                            )
+                        } else if filteredArrivals.isEmpty && selectedLine != nil {
+                            ContentUnavailableView(
+                                "No Arrivals for Line \(selectedLine!)",
+                                systemImage: "bus",
+                                description: Text("No upcoming arrivals for this line. Try selecting a different line.")
+                            )
                         }
                     }
                 }
@@ -110,10 +123,71 @@ struct StopScheduleView: View {
                 await loadData()
             }
         }
+        .presentationDetents([.medium, .large])
         .task {
             await loadData()
         }
     }
+
+    // MARK: - Arrival Row
+
+    private func arrivalRow(_ arrival: StopTime) -> some View {
+        HStack {
+            Text(arrival.line)
+                .font(.headline)
+                .foregroundStyle(.white)
+                .frame(width: DS.Size.minTapTarget)
+                .padding(.vertical, DS.Spacing.xs)
+                .background(lineColors[arrival.line] ?? .blue, in: RoundedRectangle(cornerRadius: 6))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(arrival.headsign)
+                    .font(.subheadline)
+                Text(arrival.displayTime)
+                    .font(DS.small)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            if let date = arrival.arrivalDate {
+                let totalMinutes = Int(date.timeIntervalSinceNow / 60)
+                if totalMinutes <= 0 {
+                    Text("Now")
+                        .font(DS.bodyBold)
+                        .foregroundStyle(.green)
+                } else if totalMinutes <= 15 {
+                    Text("\(totalMinutes) min")
+                        .font(DS.bodyBold)
+                        .foregroundStyle(.blue)
+                } else if totalMinutes < 60 {
+                    Text("\(totalMinutes) min")
+                        .font(DS.bodyBold)
+                        .foregroundStyle(.secondary)
+                } else {
+                    let h = totalMinutes / 60
+                    let m = totalMinutes % 60
+                    Text("\(h)h \(m)m")
+                        .font(DS.bodyBold)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+        .accessibilityLabel("Line \(arrival.line) to \(arrival.headsign)")
+        .accessibilityValue(arrivalAccessibilityValue(arrival))
+    }
+
+    private func arrivalAccessibilityValue(_ arrival: StopTime) -> String {
+        guard let date = arrival.arrivalDate else { return arrival.displayTime }
+        let totalMinutes = Int(date.timeIntervalSinceNow / 60)
+        if totalMinutes <= 0 { return "arriving now" }
+        if totalMinutes < 60 { return "in \(totalMinutes) minutes" }
+        let h = totalMinutes / 60
+        let m = totalMinutes % 60
+        return "in \(h) hour\(h > 1 ? "s" : "") \(m) minutes"
+    }
+
+    // MARK: - Data
 
     private func loadData() async {
         async let fetchedLines: [StopLine] = {
@@ -127,15 +201,13 @@ struct StopScheduleView: View {
 
         let (linesResult, scheduleResult) = await (fetchedLines, fetchedSchedule)
 
-        // Deduplicate lines by line number
         var seenLines = Set<String>()
         let uniqueLines = linesResult.filter { seenLines.insert($0.line).inserted }
 
-        // Deduplicate arrivals by tripId
         var seenTrips = Set<String>()
         let uniqueArrivals = scheduleResult
             .filter { seenTrips.insert($0.tripId).inserted }
-            .prefix(20)
+            .prefix(30)
 
         lines = uniqueLines
         allArrivals = Array(uniqueArrivals)

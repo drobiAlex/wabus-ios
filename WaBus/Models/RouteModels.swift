@@ -17,6 +17,13 @@ enum RouteType: Int, Codable, Sendable {
         case .bus: "bus.fill"
         }
     }
+
+    var color: Color {
+        switch self {
+        case .bus: Color(red: 0.20, green: 0.48, blue: 1.0)
+        case .tram: Color(red: 1.0, green: 0.27, blue: 0.35)
+        }
+    }
 }
 
 struct Route: Codable, Identifiable, Sendable {

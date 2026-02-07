@@ -10,18 +10,18 @@ struct VehicleRouteBar: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: DS.Spacing.sm + DS.Spacing.xs) {
             // Line badge
             ZStack {
                 Circle()
                     .fill(vehicle.type.color)
-                    .frame(width: 44, height: 44)
+                    .frame(width: DS.Size.annotationBadge, height: DS.Size.annotationBadge)
 
                 VStack(spacing: 1) {
                     Image(systemName: vehicle.type.systemImage)
                         .font(.system(size: 12, weight: .bold))
                     Text(vehicle.line)
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .font(DS.smallBold)
                 }
                 .foregroundStyle(.white)
             }
@@ -30,14 +30,14 @@ struct VehicleRouteBar: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text("Line \(vehicle.line)")
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .font(DS.bodyBold)
                     if viewModel.isLoadingRoute {
                         ProgressView()
                             .controlSize(.mini)
                     }
                 }
                 Text(vehicle.vehicleNumber)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .font(DS.caption)
                     .foregroundStyle(.secondary)
             }
 
@@ -51,10 +51,10 @@ struct VehicleRouteBar: View {
                 } else {
                     viewModel.addFavourite(fav)
                 }
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
+                withAnimation(DS.spring) {
                     starScale = 1.3
                 }
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.5).delay(0.15)) {
+                withAnimation(DS.spring.delay(0.15)) {
                     starScale = 1.0
                 }
             } label: {
@@ -62,41 +62,47 @@ struct VehicleRouteBar: View {
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(isFavourite ? .yellow : .secondary)
                     .scaleEffect(starScale)
-                    .frame(width: 36, height: 36)
+                    .frame(width: DS.Size.minTapTarget, height: DS.Size.minTapTarget)
             }
             .sensoryFeedback(.selection, trigger: isFavourite)
+            .accessibilityLabel(isFavourite ? "Remove from favourites" : "Add to favourites")
 
             // More info button
             Button {
                 viewModel.showVehicleDetail = true
             } label: {
-                Image(systemName: "info.circle")
+                Image(systemName: "info.circle.fill")
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 36, height: 36)
+                    .foregroundStyle(.blue)
+                    .frame(width: DS.Size.minTapTarget, height: DS.Size.minTapTarget)
             }
+            .accessibilityLabel("Vehicle details")
+            .accessibilityHint("Opens detail sheet.")
 
             // Close button
             Button {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                withAnimation(DS.springHeavy) {
                     viewModel.deselectVehicle()
                 }
             } label: {
                 Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 22))
+                    .font(DS.display)
                     .foregroundStyle(.secondary)
+                    .frame(width: DS.Size.minTapTarget, height: DS.Size.minTapTarget)
             }
+            .accessibilityLabel("Deselect vehicle")
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, DS.Spacing.md)
+        .padding(.vertical, DS.Spacing.sm + DS.Spacing.xs)
         .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(.regularMaterial)
+            RoundedRectangle(cornerRadius: DS.Radius.md)
+                .fill(.thickMaterial)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: DS.Radius.md)
+                        .strokeBorder(vehicle.type.color.opacity(0.3), lineWidth: 1.5)
                 )
+                .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
         )
-        .padding(.horizontal, 16)
+        .padding(.horizontal, DS.Spacing.md)
     }
 }
