@@ -3,7 +3,8 @@ import Foundation
 enum AppConfig {
     static var baseURL: URL {
     #if DEBUG
-        URL(string: "http://Dr-Watson-Pro.local:8080")!
+        URL(string: "https://wabus-api.lokki.space")!
+//        URL(string: "http://Dr-Watson-Pro.local:8080")!
 //        URL(string: "http://localhost:8080")!
     #else
         URL(string: "http://localhost:8080")!
