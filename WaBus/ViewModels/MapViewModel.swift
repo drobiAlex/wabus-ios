@@ -32,6 +32,7 @@ final class MapViewModel {
     private(set) var busCount: Int = 0
     private(set) var tramCount: Int = 0
     private(set) var availableLines: [(line: String, type: VehicleType)] = []
+    private(set) var lineColors: [String: Color] = [:]
 
     // MARK: - Route & Stops
 
@@ -246,7 +247,7 @@ final class MapViewModel {
                     polylines.append(RoutePolyline(
                         id: shape.id,
                         coordinates: shape.coordinates,
-                        color: type?.color ?? .blue
+                        color: lineColors[line] ?? type?.color ?? .blue
                     ))
                 }
             }
@@ -398,6 +399,18 @@ final class MapViewModel {
             if lNum != nil { return true }
             if rNum != nil { return false }
             return lhs.line < rhs.line
+        }
+
+        // Fetch per-line colors from GTFS route data
+        let newLines = result.map(\.line)
+        Task {
+            var colors: [String: Color] = [:]
+            for lineName in newLines {
+                if let route = await GTFSSyncManager.shared.getRoute(byLine: lineName) {
+                    colors[lineName] = route.displayColor
+                }
+            }
+            self.lineColors = colors
         }
     }
 

@@ -14,7 +14,7 @@ struct StopScheduleView: View {
     }
 
     private var lineColors: [String: Color] {
-        Dictionary(uniqueKeysWithValues: lines.map { ($0.line, $0.type.color) })
+        Dictionary(uniqueKeysWithValues: lines.map { ($0.line, $0.displayColor) })
     }
 
     var body: some View {
@@ -57,11 +57,11 @@ struct StopScheduleView: View {
                                             } label: {
                                                 Text(line.line)
                                                     .font(.headline)
-                                                    .foregroundStyle(isSelected ? .white : line.type.color)
+                                                    .foregroundStyle(isSelected ? .white : line.displayColor)
                                                     .padding(.horizontal, DS.Spacing.sm + DS.Spacing.xs)
                                                     .padding(.vertical, 6)
                                                     .background(
-                                                        isSelected ? line.type.color : line.type.color.opacity(0.15),
+                                                        isSelected ? line.displayColor : line.displayColor.opacity(0.15),
                                                         in: RoundedRectangle(cornerRadius: DS.Radius.sm)
                                                     )
                                             }

@@ -157,22 +157,20 @@ struct LineListView: View {
         let isFav = viewModel.favouritesStore.isFavourite(line: line, type: type)
 
         return HStack(spacing: DS.Spacing.sm + DS.Spacing.xs) {
-            ZStack {
-                Circle()
-                    .fill(type.color)
-                    .frame(width: DS.Size.lineCircle, height: DS.Size.lineCircle)
-                Text(line)
-                    .font(DS.bodyBold)
-                    .foregroundStyle(.white)
-                    .minimumScaleFactor(0.6)
-            }
+            Text(line)
+                .font(.headline)
+                .foregroundStyle(.white)
+                .frame(width: DS.Size.minTapTarget)
+                .padding(.vertical, DS.Spacing.xs)
+                .background(viewModel.lineColors[line] ?? type.color, in: RoundedRectangle(cornerRadius: 6))
+                .minimumScaleFactor(0.6)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(type.label)
-                    .font(DS.body)
+                    .font(.subheadline)
                 if isSelected {
                     Text("Selected")
-                        .font(DS.caption)
+                        .font(DS.small)
                         .foregroundStyle(type.color)
                 }
             }

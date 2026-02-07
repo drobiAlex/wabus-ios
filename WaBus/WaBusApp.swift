@@ -9,37 +9,9 @@ import SwiftUI
 
 @main
 struct WaBusApp: App {
-    @State private var isSyncing = true
-    @State private var syncError: Error?
-
     var body: some Scene {
         WindowGroup {
-            Group {
-                if isSyncing {
-                    SyncLoadingView()
-                } else if syncError != nil {
-                    SyncErrorView {
-                        syncError = nil
-                        isSyncing = true
-                        Task { await performInitialSync() }
-                    }
-                } else {
-                    ContentView()
-                }
-            }
-            .task {
-                await performInitialSync()
-            }
-        }
-    }
-
-    private func performInitialSync() async {
-        do {
-            await GTFSSyncManager.shared.syncIfNeeded()
-            isSyncing = false
-        } catch {
-            syncError = error
-            isSyncing = false
+            ContentView()
         }
     }
 }
