@@ -15,7 +15,9 @@ struct MapContentView: View {
                 Annotation(stop.name, coordinate: stop.coordinate) {
                     StopAnnotationView(stop: stop)
                         .onTapGesture {
+                            viewModel.selectedVehicle = nil
                             viewModel.selectedStop = stop
+                            viewModel.selectedDetent = .medium
                         }
                 }
             }

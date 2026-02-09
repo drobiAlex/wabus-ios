@@ -23,30 +23,18 @@ struct ContentView: View {
                         .padding(.trailing, DS.Spacing.md)
                 }
                 Spacer()
-
-                if let vehicle = viewModel.selectedVehicle {
-                    VehicleRouteBar(vehicle: vehicle)
-                        .environment(viewModel)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                        .padding(.bottom, DS.Spacing.sm)
-                }
-
-                FilterBarView(viewModel: viewModel, dimmed: viewModel.selectedVehicle != nil)
-                    .padding(.bottom, DS.Spacing.sm)
             }
         }
-        .sheet(isPresented: $viewModel.showVehicleDetail) {
-            if let vehicle = viewModel.selectedVehicle {
-                VehicleDetailSheet(vehicle: vehicle)
-                    .environment(viewModel)
-            }
-        }
-        .sheet(item: $viewModel.selectedStop) { stop in
-            StopScheduleView(stop: stop)
-        }
-        .sheet(isPresented: $viewModel.showLineList) {
-            LineListView()
-                .environment(viewModel)
+        .sheet(isPresented: .constant(true)) {
+            BottomSheetContent(viewModel: viewModel)
+                .presentationDetents(
+                    [.height(90), .medium, .large],
+                    selection: $viewModel.selectedDetent
+                )
+                .presentationBackgroundInteraction(.enabled(upThrough: .medium))
+                .interactiveDismissDisabled()
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(44)
         }
         .task {
             viewModel.start()

@@ -17,14 +17,14 @@ final class MapViewModel {
     var showBuses = true { didSet { recomputeFiltered() } }
     var showTrams = true { didSet { recomputeFiltered() } }
     var selectedVehicle: Vehicle?
-    var showVehicleDetail = false
     var isLoadingRoute = false
     var selectedStop: Stop?
     var connectionState: ConnectionState = .disconnected
     var selectedLines: Set<String> = [] { didSet { recomputeFiltered() } }
-    var showLineList = false
     var headings: [String: Double] = [:]
     let favouritesStore = FavouritesStore()
+    var selectedDetent: PresentationDetent = .height(90)
+    var searchText: String = ""
 
     // MARK: - Cached
 
@@ -99,6 +99,8 @@ final class MapViewModel {
     func selectVehicle(_ vehicle: Vehicle) {
         let previousLine = selectedVehicle?.line
         selectedVehicle = vehicle
+        selectedStop = nil
+        selectedDetent = .medium
 
         // Load route for this vehicle's line
         if vehicle.line != previousLine {
@@ -118,8 +120,14 @@ final class MapViewModel {
         }
         selectedVehicle = nil
         selectedVehicleShapes = nil
-        showVehicleDetail = false
+        selectedStop = nil
+        selectedDetent = .height(90)
         rebuildRouteOverlays()
+    }
+
+    func deselectStop() {
+        selectedStop = nil
+        selectedDetent = .height(90)
     }
 
     // MARK: - Cluster Zoom
