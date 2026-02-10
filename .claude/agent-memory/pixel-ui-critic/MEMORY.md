@@ -8,24 +8,30 @@
 - **Accent:** Yellow for favourites (star icon)
 - **Materials:** `.ultraThinMaterial`, `.regularMaterial` used heavily for glassmorphic backgrounds
 
-### Spacing System (INCONSISTENT — needs cleanup)
-- Current values: 4pt, 8pt, 10pt, 12pt, 16pt, 20pt, 24pt
-- **Recommendation:** Standardize to 8pt grid (0, 8, 16, 24, 32) or strict 4pt increments
+### Spacing System (STANDARDIZED ✓)
+- Design tokens in `DS.Spacing`: xs(4pt), sm(8pt), md(16pt), lg(24pt), xl(32pt)
+- Clean 4pt grid — no more random 10pt/12pt/20pt values
 
-### Typography Scale (TOO MANY SIZES)
-- Current: 10pt, 11pt, 12pt, 13pt, 14pt, 15pt, 16pt, 18pt, 20pt, 22pt (12 sizes!)
-- **Recommendation:** Collapse to 5 sizes: 11pt (caption), 13pt (secondary), 15pt (body), 17pt (headline), 22pt (display)
+### Typography Scale (STANDARDIZED ✓)
+- Design tokens in `DS`: caption(11pt), small(13pt), body(15pt), headline(17pt), display(22pt)
+- All use `.rounded` design with appropriate weights
+- Collapsed from 12 sizes down to 5 core sizes
 
-### Corner Radii (INCONSISTENT)
-- Current: 6pt, 8pt, 12pt, 14pt, 16pt, 20pt, Capsule
-- **Recommendation:** Standardize to 8pt (cards/buttons), 16pt (panels), Capsule (pills)
+### Corner Radii (STANDARDIZED ✓)
+- Design tokens in `DS.Radius`: sm(8pt), md(16pt)
+- Capsule used for pill shapes
+- No more inconsistent 6pt/12pt/14pt/20pt values
 
 ## Component Library
 
 ### Map Annotations
 - **VehicleAnnotationView**: Capsule with icon + line number + optional heading chevron
   - Issue: No visual state for "selected" vehicle
-- **StopAnnotationView**: Circle with bus.fill icon (hardcoded, should be generic)
+- **StopAnnotationView**: 24×24pt white circle with 2.5pt blue stroke + blue mappin icon
+  - CRITICAL: Hardcoded `.blue` (line 14, 19) — never uses route/vehicle type color
+  - Issue: Blue-on-blue visual chaos when showing bus routes
+  - Issue: Redundant icon (mappin already implied by position)
+  - See `route-visualization.md` for full critique
 - **ClusterAnnotationView**: Circle with count (NOT interactive — should be)
 
 ### Bottom UI Elements
@@ -83,9 +89,15 @@
 - Prioritizes selected/favourite lines when capping
 
 ### Caching
-- Route shapes cached by line (`routeShapesCache: [String: [RouteShape]]`)
-- Route stops cached by line (`routeStopsCache: [String: [Stop]]`)
-- Favourite vehicles refreshed every 30 seconds
+- Route shapes cached by line with 10-min TTL: `[String: (shapes: [RouteShape], fetchedAt: Date)]`
+- Route stops cached by line with 10-min TTL: `[String: (stops: [Stop], fetchedAt: Date)]`
+- Favourite vehicles refreshed every 60 seconds
+
+### Route Rendering (MapContentView.swift)
+- Polylines: 4pt stroke at 0.8 opacity (line 11)
+- Issue: Insufficient prominence, washed out appearance
+- Issue: All routes same visual weight (no hierarchy for selected vehicle)
+- See `route-visualization.md` for fixes
 
 ## Common Anti-Patterns Found
 

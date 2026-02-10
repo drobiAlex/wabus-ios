@@ -6,19 +6,29 @@ struct MapContentView: View {
 
     var body: some View {
         Map(position: $viewModel.cameraPosition) {
+            // White outline under route lines
             ForEach(viewModel.activeRoutePolylines) { polyline in
                 MapPolyline(coordinates: polyline.coordinates)
-                    .stroke(polyline.color.opacity(0.8), lineWidth: 4)
+                    .stroke(.white.opacity(0.8), lineWidth: 6)
+            }
+
+            // Colored route lines
+            ForEach(viewModel.activeRoutePolylines) { polyline in
+                MapPolyline(coordinates: polyline.coordinates)
+                    .stroke(polyline.color.opacity(0.9), lineWidth: 3)
             }
 
             ForEach(viewModel.activeRouteStops) { stop in
                 Annotation(stop.name, coordinate: stop.coordinate) {
-                    StopAnnotationView(stop: stop)
-                        .onTapGesture {
-                            viewModel.selectedVehicle = nil
-                            viewModel.selectedStop = stop
-                            viewModel.selectedDetent = .medium
-                        }
+                    StopAnnotationView(
+                        stop: stop,
+                        color: viewModel.activeRouteStopColors[stop.id] ?? .blue
+                    )
+                    .onTapGesture {
+                        viewModel.selectedVehicle = nil
+                        viewModel.selectedStop = stop
+                        viewModel.selectedDetent = .medium
+                    }
                 }
             }
 

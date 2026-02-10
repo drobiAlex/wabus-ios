@@ -38,6 +38,7 @@ final class MapViewModel {
 
     private(set) var activeRoutePolylines: [RoutePolyline] = []
     private(set) var activeRouteStops: [Stop] = []
+    private(set) var activeRouteStopColors: [String: Color] = [:]
 
     // MARK: - Clustering
 
@@ -231,6 +232,7 @@ final class MapViewModel {
     private func rebuildRouteOverlays() {
         var polylines: [RoutePolyline] = []
         var stops: [Stop] = []
+        var stopColors: [String: Color] = [:]
         var seenStopIds = Set<String>()
 
         // Collect lines to show: selectedLines + selected vehicle's line
@@ -244,6 +246,7 @@ final class MapViewModel {
 
         for line in linesToShow {
             let type = vehicleTypeForLine(line)
+            let routeColor = lineColors[line] ?? type?.color ?? .blue
             let shapes: [RouteShape]?
             if line == selectedVehicle?.line, let vehicleShapes = selectedVehicleShapes {
                 shapes = vehicleShapes
@@ -255,7 +258,7 @@ final class MapViewModel {
                     polylines.append(RoutePolyline(
                         id: shape.id,
                         coordinates: shape.coordinates,
-                        color: lineColors[line] ?? type?.color ?? .blue
+                        color: routeColor
                     ))
                 }
             }
@@ -264,6 +267,7 @@ final class MapViewModel {
                     for stop in lineStops {
                         if seenStopIds.insert(stop.id).inserted {
                             stops.append(stop)
+                            stopColors[stop.id] = routeColor
                         }
                     }
                 }
@@ -272,6 +276,7 @@ final class MapViewModel {
 
         activeRoutePolylines = polylines
         activeRouteStops = stops
+        activeRouteStopColors = stopColors
     }
 
     private func vehicleTypeForLine(_ line: String) -> VehicleType? {
