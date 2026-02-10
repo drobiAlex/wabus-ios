@@ -19,15 +19,14 @@ struct MapContentView: View {
             }
 
             ForEach(viewModel.activeRouteStops) { stop in
-                Annotation(stop.name, coordinate: stop.coordinate) {
+                Annotation(stopLabel(for: stop), coordinate: stop.coordinate) {
                     StopAnnotationView(
                         stop: stop,
-                        color: viewModel.activeRouteStopColors[stop.id] ?? .blue
+                        color: viewModel.activeRouteStopColors[stop.id] ?? .blue,
+                        isSelected: viewModel.selectedStop?.id == stop.id
                     )
                     .onTapGesture {
-                        viewModel.selectedVehicle = nil
-                        viewModel.selectedStop = stop
-                        viewModel.selectedDetent = .medium
+                        viewModel.selectStop(stop)
                     }
                 }
             }
@@ -57,6 +56,15 @@ struct MapContentView: View {
         .mapStyle(.standard(elevation: .realistic))
         .onMapCameraChange(frequency: .onEnd) { context in
             viewModel.onMapRegionChanged(context.region)
+        }
+    }
+
+    private func stopLabel(for stop: Stop) -> String {
+        let isSelected = viewModel.selectedStop?.id == stop.id
+        if isSelected { return stop.name }
+        switch viewModel.zoomLevel {
+        case .high: return stop.name
+        case .medium, .low: return ""
         }
     }
 }

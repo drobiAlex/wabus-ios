@@ -40,6 +40,19 @@ final class MapViewModel {
     private(set) var activeRouteStops: [Stop] = []
     private(set) var activeRouteStopColors: [String: Color] = [:]
 
+    // MARK: - Zoom Level
+
+    enum ZoomLevel {
+        case low, medium, high
+    }
+
+    var zoomLevel: ZoomLevel {
+        guard let span = visibleRegion?.span.latitudeDelta else { return .low }
+        if span < 0.008 { return .high }
+        if span < 0.04 { return .medium }
+        return .low
+    }
+
     // MARK: - Clustering
 
     private(set) var singleVehicles: [Vehicle] = []
@@ -124,6 +137,18 @@ final class MapViewModel {
         selectedStop = nil
         selectedDetent = .height(90)
         rebuildRouteOverlays()
+    }
+
+    func selectStop(_ stop: Stop) {
+        selectedVehicle = nil
+        selectedStop = stop
+        selectedDetent = .medium
+        withAnimation(DS.spring) {
+            cameraPosition = .region(MKCoordinateRegion(
+                center: stop.coordinate,
+                span: visibleRegion?.span ?? MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+            ))
+        }
     }
 
     func deselectStop() {
@@ -219,7 +244,12 @@ final class MapViewModel {
                 async let stopsReq = WaBusClient.shared.getRouteStops(line: line)
                 let (shapes, stops) = try await (shapesReq, stopsReq)
                 guard !Task.isCancelled else { return }
-                selectedVehicleShapes = shapes
+                if let vehicle = selectedVehicle,
+                   let direction = inferDirection(for: vehicle, from: shapes) {
+                    selectedVehicleShapes = shapes.filter { $0.directionId == direction }
+                } else {
+                    selectedVehicleShapes = shapes
+                }
                 routeStopsCache[line] = (stops, Date())
                 rebuildRouteOverlays()
             } catch {
@@ -227,6 +257,40 @@ final class MapViewModel {
             }
             isLoadingRoute = false
         }
+    }
+
+    // MARK: - Direction Inference
+
+    private func inferDirection(for vehicle: Vehicle, from shapes: [RouteShape]) -> Int? {
+        var distByDirection: [Int: Double] = [:]
+        for shape in shapes {
+            guard let dir = shape.directionId else { return nil }
+            let dist = minimumDistance(from: vehicle, to: shape.points)
+            if let existing = distByDirection[dir] {
+                distByDirection[dir] = min(existing, dist)
+            } else {
+                distByDirection[dir] = dist
+            }
+        }
+        guard distByDirection.count == 2 else { return nil }
+        let sorted = distByDirection.sorted { $0.value < $1.value }
+        let closest = sorted[0]
+        let farthest = sorted[1]
+        // Ambiguity threshold: if ratio < 2x, both directions are roughly equidistant
+        guard farthest.value > closest.value * 2.0 else { return nil }
+        return closest.key
+    }
+
+    private func minimumDistance(from vehicle: Vehicle, to points: [ShapePoint]) -> Double {
+        let cosLat = cos(vehicle.lat * .pi / 180)
+        var minDist = Double.greatestFiniteMagnitude
+        for point in points {
+            let dlat = point.lat - vehicle.lat
+            let dlon = (point.lon - vehicle.lon) * cosLat
+            let dist = dlat * dlat + dlon * dlon
+            if dist < minDist { minDist = dist }
+        }
+        return minDist
     }
 
     private func rebuildRouteOverlays() {

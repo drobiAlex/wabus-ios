@@ -15,6 +15,12 @@ struct ShapePoint: Codable, Sendable {
 struct RouteShape: Codable, Identifiable, Sendable {
     let id: String
     let points: [ShapePoint]
+    let directionId: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case id, points
+        case directionId = "direction_id"
+    }
 
     var coordinates: [CLLocationCoordinate2D] {
         points.sorted { $0.sequence < $1.sequence }.map(\.coordinate)

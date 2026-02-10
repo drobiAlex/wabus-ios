@@ -47,5 +47,7 @@ enum DS {
         static let annotationBadge: CGFloat = 44
         static let detailBadge: CGFloat = 72
         static let lineCircle: CGFloat = 38
+        static let stopDot: CGFloat = 12
+        static let stopDotSelected: CGFloat = 16
     }
 }
