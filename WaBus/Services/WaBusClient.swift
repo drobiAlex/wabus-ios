@@ -176,7 +176,7 @@ final class WaBusClient: Sendable {
         guard let url = components?.url else { throw WaBusError.invalidURL }
 
         var request = URLRequest(url: url)
-        request.setValue("gzip", forHTTPHeaderField: "Accept-Encoding")
+        request.setValue("br, gzip", forHTTPHeaderField: "Accept-Encoding")
 
         if let etag {
             request.setValue(etag, forHTTPHeaderField: "If-None-Match")

@@ -238,7 +238,7 @@ actor GTFSSyncManager {
         let startTime = Date()
 
         var request = URLRequest(url: AppConfig.baseURL.appendingPathComponent("/v1/sync"))
-        request.setValue("gzip", forHTTPHeaderField: "Accept-Encoding")
+        request.setValue("br, gzip", forHTTPHeaderField: "Accept-Encoding")
 
         // Add ETag for conditional request
         if let etag = UserDefaults.standard.string(forKey: etagKey) {
